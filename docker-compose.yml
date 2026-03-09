@@ -1,0 +1,54 @@
+services:
+  # ── Base de dados SQL ──────────────────────────────────
+  postgresql:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: biblioteca
+      POSTGRES_USER: biblioteca
+      POSTGRES_PASSWORD: biblioteca123
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - biblioteca-net
+
+  # ── Base de dados NoSQL ────────────────────────────────
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - biblioteca-net
+
+  # ── API Spring Boot (O Dockerfile está na raiz) ────────
+  book-service:
+    build: .
+    ports:
+      - '8080:8080'
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/biblioteca
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/biblioteca
+    depends_on:
+      - postgresql
+      - mongodb
+    networks:
+      - biblioteca-net
+
+  # ── Interface Web Flask ─────────────────────────────────
+  web-ui:
+    build: ./web-ui
+    ports:
+      - '5000:5000'
+    environment:
+      API_BASE: http://book-service:8080
+    depends_on:
+      - book-service
+    networks:
+      - biblioteca-net
+
+volumes:
+  pg_data:
+  mongo_data:
+
+networks:
+  biblioteca-net:
+    driver: bridge
